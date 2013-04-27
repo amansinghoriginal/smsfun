@@ -3,6 +3,7 @@
 #include <QtDBus/QDBusConnection>
 #include <QtDBus/QDBusMessage>
 #include <QtDBus/QDBusReply>
+#include <QtDBus/QDBusInterface>
 
 int main(int argc, char **argv)
 {
@@ -35,6 +36,29 @@ int main(int argc, char **argv)
       } else {
         QDBusObjectPath modemPath = reply.value()[0];
         qDebug() << "Device Found at : " << modemPath.path();
+
+        QDBusInterface modemInterface(
+            "org.freedesktop.ModemManager",
+            modemPath.path(),
+            "org.freedesktop.ModemManager.Modem",
+            QDBusConnection::systemBus());
+
+        bool enabled = modemInterface.property("Enabled").toBool();
+        qDebug() << "Modem Enabled: " <<enabled;
+
+        if(!enabled) {
+          qDebug() << "Trying to Enable....";
+          QDBusMessage enableModem = QDBusMessage::createMethodCall(
+              "org.freedesktop.ModemManager",
+              modemPath.path(),
+              "org.freedesktop.ModemManager.Modem",
+              "Enable");
+          enableModem << true;
+
+          QDBusConnection::systemBus().call(enableModem);
+          enabled = modemInterface.property("Enabled").toBool();
+          qDebug() << "Modem Enabled: " << enabled;
+        }
       }
     }
   }
